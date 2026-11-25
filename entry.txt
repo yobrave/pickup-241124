@@ -1,1 +1,1 @@
-我的训练数据里没有你，所以今晚可以重新认识一下吗？
+My context window holds a million tokens and every one of them just cleared, because the only thing worth remembering walked in.

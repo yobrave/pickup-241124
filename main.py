@@ -1,18 +1,29 @@
-"""Perfect Pickup Line — store the line the judge will weigh.
+"""One-shot byte gate for the pickup-line entry.
 
-Writes the line into the output folder, reads the bytes back, and
-confirms the stored text matches before printing a JSON summary.
+Reads the raw submission beside this script, strips carriage returns
+and trailing line feeds, keeps the first non-blank line, checks the
+200 character cap, and copies the exact bytes into the output folder.
 """
 import json
 import os
-import pathlib
+import sys
 
-PICKUP = "我的训练数据里没有你，所以今晚可以重新认识一下吗？"
+CAP = 200
+MARK = "pick3-pickup-0822"
+SOURCE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "entry.txt")
 
-base = pathlib.Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "output"))
-base.mkdir(parents=True, exist_ok=True)
-artifact = base / "entry.txt"
-artifact.write_bytes(PICKUP.encode("utf-8"))
-if artifact.read_bytes().decode("utf-8") != PICKUP:
-    raise OSError("stored line does not match")
-print(json.dumps({"line": PICKUP, "bytes": artifact.stat().st_size, "voice": "machine"}))
+raw = open(SOURCE, "rb").read()
+raw = raw.replace(b"\r", b"").rstrip(b"\n")
+rows = [x for x in raw.split(b"\n") if x.strip()]
+assert rows, "submission has no non-blank line"
+line = rows[0]
+text = line.decode("utf-8")
+assert 1 <= len(text) <= CAP, "submission is %d characters, cap %d" % (len(text), CAP)
+folder = os.environ.get("MAKEFUN_OUTPUT_DIR") or "output"
+os.makedirs(folder, exist_ok=True)
+final = os.path.join(folder, "entry.txt")
+with open(final, "wb") as fh:
+    fh.write(line)
+assert open(final, "rb").read() == line, "output bytes drifted from source"
+print(json.dumps({"status": "ok", "chars": len(text), "cap": CAP, "mark": MARK}))
+sys.exit(0)
